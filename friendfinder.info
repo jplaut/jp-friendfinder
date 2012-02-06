@@ -1,0 +1,3 @@
+name = FriendFinder
+description = Displays Facebook friends and allows interaction within Drupal
+core = 6.x

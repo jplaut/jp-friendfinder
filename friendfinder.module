@@ -1,0 +1,124 @@
+<?php
+
+require_once("fb-php-sdk/facebook.php");
+
+function fb_call($call, $token=0) {
+	if ($token) {
+		$encodedJSON = file_get_contents("https://graph.facebook.com/". $call. "&access_token=". $token);
+	}
+	else {
+		$encodedJSON = file_get_contents("http://graph.facebook.com/". $call);
+	}
+	
+	return json_decode($encodedJSON, true);
+}
+
+function fb_url($call, $token) {
+	return "https://graph.facebook.com/". $call ."&access_token=". $token;
+}
+
+function get_access_token_url($tokenType, $scope = '', $code='') {
+	$appID = '183864661712986';
+	$appSecret = '453c0ad8f9f39561a9021457610ad0ad';
+	$redirect_uri = 'http://localhost:5000?q=friendfinder/';
+	
+	if ($tokenType == 'app') {
+		$url = 'https://facebook.com/dialog/oauth?client_id='. $appID .'&redirect_uri='. $redirect_uri .'&scope='. $scope;
+	}
+	else if ($tokenType == 'client') {
+		$url = 'https://graph.facebook.com/oauth/access_token?client_id='. $appID .'&redirect_uri='. $redirect_uri .'&client_secret='. $appSecret .'&type=client_cred&code='. $code;
+	}
+	
+	return $url;
+}
+function friendfinder_help($path, $arg) {
+	$output = '';
+	switch ($path) {
+		case "admin/help#friend":
+			$output = '<p>'. t("Displays Facebook friends and allows interaction within Drupal") .'</p>';
+			break;
+	}
+	return $output;
+}
+
+function friendfinder_perm() {
+	return array('access friendfinder content');
+}
+
+function friendfinder_all() {
+	
+	$output = '';
+	
+	$username = variable_get("friendfinder_username", '');
+	$url = $_SERVER['REQUEST_URI'];
+	$urlExploded = explode("&", $url);
+	$code = (split("=", $urlExploded[1]));
+	$appToken = $code[1];
+	
+	if ($username){
+		if ($appToken) {
+			$clientTokenJSON = split('=', file_get_contents(get_access_token_url('client', '', $appToken)));
+			$clientToken = $clientTokenJSON[1];
+			$friends = fb_call(variable_get("friendfinder_username", '') ."/friends&limit=4", $clientToken);
+			$output .= "<p>Here are some of your Facebook friends: </p>";
+			foreach ($friends['data'] as $friend) {
+					$metadata = fb_call($friend['id'], $clientToken);
+					$profile = "http://www.facebook.com/". $friend['id'];
+					$output .= "<div id='fbfriends'>";
+					$output .=  l("<img src='". fb_url($friend['id'] ."/picture", $clientToken) ."' />", $profile, array('html' => true));
+					$output .= "<p>". l($metadata['name'], $profile) ."</p>";
+					$output .= "</div>";
+				}
+		
+		}
+		else {
+			$output .= l('Login to Facebook', get_access_token_url('app'));
+		}
+	}
+	else {
+		$output .= "Before using FriendFinder you must ". l('enter your Facebook username', 'admin/settings/friendfinder') .".";
+	}
+
+
+	return $output;
+}
+
+function friendfinder_config() {
+	$form = array();
+	
+	$form['friendfinder_username'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Facebook username'),
+		'#default_value' => variable_get('friendfinder_username', ''),
+		'#size' => 20,
+		'#description' => t('The custom Facebook username for your Facebook account'),
+		'#required' => TRUE,
+	);
+	
+	return system_settings_form($form);
+}
+
+function friendfinder_menu() {
+	$items = array();
+	
+	$items['friendfinder'] = array(
+		'title' => 'FriendFinder',
+		'page callback' => 'friendfinder_all',
+		'access arguments' => array('access friendfinder content'),
+		'weight' => 9,
+		'type' => MENU_NORMAL_ITEM,
+	);
+	
+	$items['admin/settings/friendfinder'] = array(
+		'title' => t('FriendFinder module settings'),
+		'description' => t('FriendFinder configuration page'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('friendfinder_config'),
+		'access arguments' => array('access friendfinder content'),
+		'type' => MENU_CALLBACK,
+	);
+	
+	return $items;
+}
+
+
