@@ -1,39 +1,75 @@
 <?php
 
-require_once("fb-php-sdk/facebook.php");
+define('APP_ID', '183864661712986');
+define('APP_SECRET', '453c0ad8f9f39561a9021457610ad0ad');
+define('REDIRECT_URI', 'http://localhost:5000?q=friendfinder/');
 
 function fb_call($call, $token=0) {
-	if ($token) {
-		$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
-		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
-		$encodedJSON = curl_exec($init);
-		curl_close($init);
-	}
-	else {
-		$encodedJSON = file_get_contents("http://graph.facebook.com/". $call);
+	if ($token) { 
+			$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
+			curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
+			$encodedJSON = curl_exec($init);
+			curl_close($init);
+			$decodedJSON = json_decode($encodedJSON, true);
 	}
 	
-	return json_decode($encodedJSON, true);
+	else {
+		$init = curl_init("https://graph.facebook.com/". $call);
+		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
+		$decodedJSON = curl_exec($init);
+		curl_close($init);
+	}
+	
+	return $decodedJSON;
 }
 
 function fb_url($call, $token) {
 	return "https://graph.facebook.com/". $call ."&access_token=". $token;
 }
 
-function get_access_token_url($tokenType, $scope = '', $code='') {
-	$appID = '183864661712986';
-	$appSecret = '453c0ad8f9f39561a9021457610ad0ad';
-	$redirect_uri = 'http://localhost:5000?q=friendfinder/';
-	
-	if ($tokenType == 'app') {
-		$url = 'https://facebook.com/dialog/oauth?client_id='. $appID .'&redirect_uri='. $redirect_uri .'&scope='. $scope;
+function get_app_token_url($scope = '') {
+	if ($scope) {
+		$params = array(
+			'client_id' => APP_ID,
+			'redirect_uri' => REDIRECT_URI,
+			'scope' => $scope,
+		);
+		return 'https://facebook.com/dialog/oauth?' . http_build_query($params, '', '&');
 	}
-	else if ($tokenType == 'client') {
-		$url = 'https://graph.facebook.com/oauth/access_token?client_id='. $appID .'&redirect_uri='. $redirect_uri .'&client_secret='. $appSecret .'&type=client_cred&code='. $code;
+	else {
+		$params = array(
+			'client_id' => APP_ID,
+			'redirect_uri' => REDIRECT_URI,
+		);
+		return 'https://facebook.com/dialog/oauth?' . http_build_query($params, '', '&');
 	}
-	
-	return $url;
 }
+
+function get_app_token() {
+	$url = $_SERVER['REQUEST_URI'];
+	$urlExploded = explode("&", $url);
+	$code = (split("=", $urlExploded[1]));
+	$appToken = $code[1];
+	
+	return $appToken;
+}
+
+function get_client_token($token) {
+	$params = array(
+		'client_id' => APP_ID,
+		'redirect_uri' => REDIRECT_URI,
+		'client_secret' => APP_SECRET,
+		'type' => 'client_cred',
+		'code' => $token,
+	);
+	
+	$tokenJSON = fb_call('oauth/access_token?' . http_build_query($params, '', '&'));
+	$tokenArray = split('=', $tokenJSON);
+	$clientToken = $tokenArray[1];
+	
+	return $clientToken;
+}
+
 function friendfinder_help($path, $arg) {
 	$output = '';
 	switch ($path) {
@@ -51,18 +87,13 @@ function friendfinder_perm() {
 function friendfinder_all() {
 	
 	$output = '';
-	
 	$username = variable_get("friendfinder_username", '');
-	$url = $_SERVER['REQUEST_URI'];
-	$urlExploded = explode("&", $url);
-	$code = (split("=", $urlExploded[1]));
-	$appToken = $code[1];
+	$appToken = get_app_token();
 	
 	if ($username){
 		if ($appToken) {
-			$clientTokenJSON = split('=', file_get_contents(get_access_token_url('client', '', $appToken)));
-			$clientToken = $clientTokenJSON[1];
-			$friends = fb_call(variable_get("friendfinder_username", '') ."/friends&limit=4", $clientToken);
+			$clientToken = get_client_token($appToken);
+			$friends = fb_call($username ."/friends&limit=4", $clientToken);
 			$output .= "<p>Here are some of your Facebook friends: </p>";
 			foreach ($friends['data'] as $friend) {
 					$metadata = fb_call($friend['id'], $clientToken);
@@ -75,7 +106,7 @@ function friendfinder_all() {
 		
 		}
 		else {
-			$output .= l('Login to Facebook', get_access_token_url('app'));
+			$output .= l('Login to Facebook', get_app_token_url());
 		}
 	}
 	else {
@@ -95,7 +126,6 @@ function friendfinder_config() {
 		'#default_value' => variable_get('friendfinder_username', ''),
 		'#size' => 20,
 		'#description' => t('The custom Facebook username for your Facebook account'),
-		'#required' => TRUE,
 	);
 	
 	return system_settings_form($form);
@@ -123,5 +153,3 @@ function friendfinder_menu() {
 	
 	return $items;
 }
-
-
