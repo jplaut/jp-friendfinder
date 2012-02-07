@@ -8,11 +8,11 @@ function fb_call($call, $token=0) {
 	/*if a call includes a token, run the query with the token, 
 	grabbing and decoding the returned JSON*/
 	if ($token) { 
-			$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
-			curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
-			$encodedJSON = curl_exec($init);
-			curl_close($init);
-			$decodedJSON = json_decode($encodedJSON, true);
+		$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
+		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
+		$encodedJSON = curl_exec($init);
+		curl_close($init);
+		$decodedJSON = json_decode($encodedJSON, true);
 	}
 	//if no token is provided, run the query without a token
 	else {
@@ -97,7 +97,9 @@ function friendfinder_all() {
 	$username = variable_get("friendfinder_username", '');
 	$appToken = get_app_token();
 	
+	//if the client configured their username, check for a valid app token
 	if ($username){
+		//if an app token exists, get a client token
 		if ($appToken) {
 			$clientToken = get_client_token($appToken);
 			//get a list of 4 of the user's Facebook friends 
@@ -114,14 +116,15 @@ function friendfinder_all() {
 				}
 		
 		}
+		//if no app token exists, send the client through the facebook auth process
 		else {
 			$output .= l('Login to Facebook', get_app_token_url());
 		}
 	}
+	//if no username has been configured, send client to friendfinder settings page
 	else {
 		$output .= "Before using FriendFinder you must ". l('enter your Facebook username', 'admin/settings/friendfinder') .".";
 	}
-
 
 	return $output;
 }
