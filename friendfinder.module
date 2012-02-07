@@ -120,6 +120,7 @@ function friendfinder_all() {
 		else {
 			$output .= l('Login to Facebook', get_app_token_url());
 		}
+		$output .= '<br /><br />Not ' . $username . '? Enter a different Facebook username ' . l('here', 'admin/settings/friendfinder') . '.';
 	}
 	//if no username has been configured, send client to friendfinder settings page
 	else {
@@ -137,7 +138,7 @@ function friendfinder_config() {
 		'#title' => t('Facebook username'),
 		'#default_value' => variable_get('friendfinder_username', ''),
 		'#size' => 20,
-		'#description' => t('The custom Facebook username for your Facebook account'),
+		'#description' => t('Found at the end of your Facebook profile URL (http://www.facebook.com/xxxxxxxx)'),
 	);
 	
 	return system_settings_form($form);
