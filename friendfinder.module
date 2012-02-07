@@ -4,32 +4,6 @@ define('APP_ID', '183864661712986');
 define('APP_SECRET', '453c0ad8f9f39561a9021457610ad0ad');
 define('REDIRECT_URI', 'http://localhost:5000?q=friendfinder/');
 
-function fb_call($call, $token=0) {
-	/*if a call includes a token, run the query with the token, 
-	grabbing and decoding the returned JSON*/
-	if ($token) { 
-		$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
-		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
-		$encodedJSON = curl_exec($init);
-		curl_close($init);
-		$decodedJSON = json_decode($encodedJSON, true);
-	}
-	//if no token is provided, run the query without a token
-	else {
-		$init = curl_init("https://graph.facebook.com/". $call);
-		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
-		$decodedJSON = curl_exec($init);
-		curl_close($init);
-	}
-	
-	return $decodedJSON;
-}
-
-function fb_url($call, $token) {
-	//generate a url to access facebook data
-	return "https://graph.facebook.com/". $call ."&access_token=". $token;
-}
-
 function get_app_token_url($scope = '') {
 	//if a scope is provided, generate a url with a scope
 	if ($scope) {
@@ -75,6 +49,32 @@ function get_client_token($token) {
 	$clientToken = $tokenArray[1];
 	
 	return $clientToken;
+}
+
+function fb_url($call, $token) {
+	//generate a url to access facebook data
+	return "https://graph.facebook.com/". $call ."&access_token=". $token;
+}
+
+function fb_call($call, $token=0) {
+	/*if a call includes a token, run the query with the token, 
+	grabbing and decoding the returned JSON*/
+	if ($token) { 
+		$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
+		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
+		$encodedJSON = curl_exec($init);
+		curl_close($init);
+		$decodedJSON = json_decode($encodedJSON, true);
+	}
+	//if no token is provided, run the query without a token
+	else {
+		$init = curl_init("https://graph.facebook.com/". $call);
+		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
+		$decodedJSON = curl_exec($init);
+		curl_close($init);
+	}
+	
+	return $decodedJSON;
 }
 
 function friendfinder_help($path, $arg) {
