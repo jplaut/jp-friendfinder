@@ -4,7 +4,10 @@ require_once("fb-php-sdk/facebook.php");
 
 function fb_call($call, $token=0) {
 	if ($token) {
-		$encodedJSON = file_get_contents("https://graph.facebook.com/". $call. "&access_token=". $token);
+		$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
+		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
+		$encodedJSON = curl_exec($init);
+		curl_close($init);
 	}
 	else {
 		$encodedJSON = file_get_contents("http://graph.facebook.com/". $call);
