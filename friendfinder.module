@@ -5,6 +5,8 @@ define('APP_SECRET', '453c0ad8f9f39561a9021457610ad0ad');
 define('REDIRECT_URI', 'http://localhost:5000?q=friendfinder/');
 
 function fb_call($call, $token=0) {
+	/*if a call includes a token, run the query with the token, 
+	grabbing and decoding the returned JSON*/
 	if ($token) { 
 			$init = curl_init("https://graph.facebook.com/". $call. "&access_token=". $token);
 			curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
@@ -12,7 +14,7 @@ function fb_call($call, $token=0) {
 			curl_close($init);
 			$decodedJSON = json_decode($encodedJSON, true);
 	}
-	
+	//if no token is provided, run the query without a token
 	else {
 		$init = curl_init("https://graph.facebook.com/". $call);
 		curl_setopt($init, CURLOPT_RETURNTRANSFER, true);
@@ -24,10 +26,12 @@ function fb_call($call, $token=0) {
 }
 
 function fb_url($call, $token) {
+	//generate a url to access facebook data
 	return "https://graph.facebook.com/". $call ."&access_token=". $token;
 }
 
 function get_app_token_url($scope = '') {
+	//if a scope is provided, generate a url with a scope
 	if ($scope) {
 		$params = array(
 			'client_id' => APP_ID,
@@ -36,6 +40,7 @@ function get_app_token_url($scope = '') {
 		);
 		return 'https://facebook.com/dialog/oauth?' . http_build_query($params, '', '&');
 	}
+	//if no scope is provided, return a url with no scope param
 	else {
 		$params = array(
 			'client_id' => APP_ID,
@@ -46,6 +51,7 @@ function get_app_token_url($scope = '') {
 }
 
 function get_app_token() {
+	//get facebook app token by grabbing it from the url once redirected from facebook
 	$url = $_SERVER['REQUEST_URI'];
 	$urlExploded = explode("&", $url);
 	$code = (split("=", $urlExploded[1]));
@@ -55,6 +61,7 @@ function get_app_token() {
 }
 
 function get_client_token($token) {
+	//get the facebook client token by scraping the contents of the returned JSON
 	$params = array(
 		'client_id' => APP_ID,
 		'redirect_uri' => REDIRECT_URI,
@@ -93,7 +100,9 @@ function friendfinder_all() {
 	if ($username){
 		if ($appToken) {
 			$clientToken = get_client_token($appToken);
-			$friends = fb_call($username ."/friends&limit=4", $clientToken);
+			//get a list of 4 of the user's Facebook friends 
+			$friends = fb_call($username . "/friends&limit=4", $clientToken); 
+			//add the photo and name of the friends to the output
 			$output .= "<p>Here are some of your Facebook friends: </p>";
 			foreach ($friends['data'] as $friend) {
 					$metadata = fb_call($friend['id'], $clientToken);
